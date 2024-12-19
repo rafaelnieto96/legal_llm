@@ -1,8 +1,9 @@
 import streamlit as st
 from frontend.components.chat_interface import ChatInterface
 from models.model import LegalLLM
-from tokenizer.tokenizer import SimpleTokenizer
+from tokenizer.tokenizer import LegalTokenizer
 import torch
+from tokenizers import Tokenizer
 
 class ChatPage:
     def __init__(self):
@@ -105,33 +106,47 @@ Estoy aquí para ayudarte con consultas legales básicas. Puedes preguntarme sob
 
     def get_model_response(self, user_input: str) -> str:
         """Usa el modelo entrenado para generar respuestas"""
-        # Cargar el modelo y tokenizador
-        checkpoint = torch.load('legal_llm_model.pth')
-        
-        # Inicializar tokenizador con el vocabulario guardado
-        tokenizer = SimpleTokenizer()
-        tokenizer.word_to_idx = checkpoint['tokenizer_vocab']
-        tokenizer.vocab_size = len(tokenizer.word_to_idx)
-        tokenizer.idx_to_word = {v: k for k, v in tokenizer.word_to_idx.items()}
-        
-        # Inicializar y cargar modelo
-        model = LegalLLM(tokenizer.vocab_size)
-        model.load_state_dict(checkpoint['model_state_dict'])
-        model.eval()
+        try:
+            # Cargar checkpoint con weights_only=True
+            checkpoint = torch.load('best_legal_llm_model.pth', weights_only=True)
+            
+            # Inicializar tokenizer y cargar su configuración
+            tokenizer = LegalTokenizer()
+            tokenizer.tokenizer = Tokenizer.from_file('tokenizer/tokenizer.json')
+            tokenizer.vocab_size = tokenizer.tokenizer.get_vocab_size()
+            
+            # Inicializar el modelo con la arquitectura correcta
+            model = LegalLLM(
+                vocab_size=tokenizer.vocab_size,
+                d_model=512,
+                nhead=8,
+                num_layers=6,
+                dropout=0.1
+            ).to('cuda' if torch.cuda.is_available() else 'cpu')
+            
+            # Cargar los pesos del modelo ignorando las capas extra
+            model.load_state_dict(checkpoint['model_state_dict'], strict=False)
+            model.eval()
 
+            # Procesar input
+            input_tokens = tokenizer.encode(user_input)
+            input_tensor = torch.tensor([input_tokens]).to('cuda' if torch.cuda.is_available() else 'cpu')
 
-        # Tokenizar la entrada
-        input_tokens = tokenizer.encode(user_input)
-        input_tensor = torch.tensor([input_tokens])
-
-        # Generar respuesta
-        with torch.no_grad():
-            output = model(input_tensor)
-            output_tokens = torch.argmax(output, dim=-1)[0].tolist()
-        
-        # Decodificar respuesta
-        response = tokenizer.decode(output_tokens)
-        return response
+            # Generar respuesta
+            with torch.no_grad():
+                output = model.generate(
+                    input_tensor,
+                    max_length=100,
+                    temperature=0.7
+                )
+            
+            # Decodificar respuesta
+            response = tokenizer.decode(output[0].tolist())
+            return response
+            
+        except Exception as e:
+            print(f"Error al generar respuesta: {str(e)}")
+            return f"Lo siento, hubo un error al procesar tu consulta: {str(e)}"
     
     def run(self):
         self.chat_interface.display_chat_history()
