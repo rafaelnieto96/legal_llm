@@ -1,5 +1,6 @@
 venv
 __pycache__
-data
-legal_llm_model.pth
+src\models\__pycache__
+src\frontend\pages\__pycache__
 __init__.py
+train_files

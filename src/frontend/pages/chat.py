@@ -4,9 +4,13 @@ from models.model import LegalLLM
 from tokenizer.tokenizer import LegalTokenizer
 import torch
 from tokenizers import Tokenizer
+import os
 
 class ChatPage:
     def __init__(self):
+        # Obtener la ruta base del proyecto (3 niveles arriba de chat.py)
+        self.base_path = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+        self.train_files_path = os.path.join(self.base_path, 'train_files')
         self.setup_page()
         self.chat_interface = ChatInterface()
         self.setup_sidebar()
@@ -105,14 +109,13 @@ Estoy aquí para ayudarte con consultas legales básicas. Puedes preguntarme sob
             st.session_state.welcome_shown = True
 
     def get_model_response(self, user_input: str) -> str:
-        """Usa el modelo entrenado para generar respuestas"""
         try:
-            # Cargar checkpoint con weights_only=True
-            checkpoint = torch.load('best_legal_llm_model.pth', weights_only=True)
+            model_path = os.path.join(self.train_files_path, 'best_legal_llm_model.pth')
+            tokenizer_path = os.path.join(self.train_files_path, 'tokenizer', 'tokenizer.json')
             
-            # Inicializar tokenizer y cargar su configuración
+            checkpoint = torch.load(model_path, weights_only=True)
             tokenizer = LegalTokenizer()
-            tokenizer.tokenizer = Tokenizer.from_file('tokenizer/tokenizer.json')
+            tokenizer.tokenizer = Tokenizer.from_file(tokenizer_path)
             tokenizer.vocab_size = tokenizer.tokenizer.get_vocab_size()
             
             # Inicializar el modelo con la arquitectura correcta

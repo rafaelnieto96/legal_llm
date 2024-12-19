@@ -36,7 +36,7 @@ def train():
    gradient_clip_val = 1.0
 
    # Crear directorios para guardar los archivos de entrenamiento
-   training_dir = 'training'
+   training_dir = 'train_files'
    tokenizer_dir = os.path.join(training_dir, 'tokenizer')
    checkpoints_dir = os.path.join(training_dir, 'checkpoints')
    os.makedirs(training_dir, exist_ok=True)
@@ -45,7 +45,7 @@ def train():
 
    # Cargar datos (usar más datos)
    print("Cargando datos...")
-   texts = load_training_data(limit=1000)  # Aumentar el límite o quitar para usar todo el dataset
+   texts = load_training_data(limit=100)  # Aumentar el límite o quitar para usar todo el dataset
 
    # Preparar tokenizer
    print("Preparando tokenizer...")
