@@ -1,2 +1,5 @@
 venv
-__pycache
+__pycache__
+data
+legal_llm_model.pth
+__init__.py
